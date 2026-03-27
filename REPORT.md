@@ -16,11 +16,38 @@ Paste your checkpoint evidence below. Add screenshots as image files in the repo
 
 ## Task 2A — Deployed agent
 
-<!-- Paste a short nanobot startup log excerpt showing the gateway started inside Docker -->
+Nanobot gateway запущен в Docker с MCP инструментами:
+
+```
+Container se-toolkit-lab-8-nanobot-1 Running
+MCP server 'lms': connected, 9 tools registered
+Agent loop started
+```
+
+Зарегистрированные MCP инструменты:
+- mcp_lms_lms_health
+- mcp_lms_lms_labs
+- mcp_lms_lms_learners
+- mcp_lms_lms_pass_rates
+- mcp_lms_lms_timeline
+- mcp_lms_lms_groups
+- mcp_lms_lms_top_learners
+- mcp_lms_lms_completion_rate
+- mcp_lms_lms_sync_pipeline
 
 ## Task 2B — Web client
 
-<!-- Screenshot of a conversation with the agent in the Flutter web app -->
+Flutter web client доступен по адресу `http://<vm-ip>:42002/flutter/`
+WebSocket endpoint работает на `/ws/chat`
+
+Все сервисы запущены:
+- backend: Up
+- caddy: Up
+- nanobot: Up
+- qwen-code-api: Up (healthy)
+- postgres: Up (healthy)
+- client-web-react: Up
+- client-web-flutter: Up
 
 ## Task 3A — Structured logging
 
