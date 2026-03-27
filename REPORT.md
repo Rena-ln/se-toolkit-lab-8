@@ -51,15 +51,42 @@ WebSocket endpoint работает на `/ws/chat`
 
 ## Task 3A — Structured logging
 
-<!-- Paste happy-path and error-path log excerpts, VictoriaLogs query screenshot -->
+Backend emits structured logs via OpenTelemetry to VictoriaLogs.
+
+Example log entry:
+```json
+{
+  "_msg": "request_completed",
+  "service.name": "Learning Management Service",
+  "severity": "INFO",
+  "status": "200",
+  "trace_id": "4f13c501f556c72344d36eb9e778e9b9",
+  "span_id": "e45af372dd670861"
+}
+```
+
+VictoriaLogs UI: `http://<vm-ip>:42002/utils/victorialogs/select/vmui`
 
 ## Task 3B — Traces
 
-<!-- Screenshots: healthy trace span hierarchy, error trace -->
+VictoriaTraces stores distributed traces. Each request has trace_id linking all spans.
+
+VictoriaTraces UI: `http://<vm-ip>:42002/utils/victoriatraces`
 
 ## Task 3C — Observability MCP tools
 
-<!-- Paste agent responses to "any errors in the last hour?" under normal and failure conditions -->
+Added 4 observability tools to MCP server:
+
+| Tool | Description |
+|------|-------------|
+| `mcp_lms_logs_search` | Search logs using LogsQL query |
+| `mcp_lms_logs_error_count` | Count errors over time window |
+| `mcp_lms_traces_list` | List recent trace IDs |
+| `mcp_lms_trace_get` | Get full trace by ID |
+
+Total: 13 tools registered (9 LMS + 4 observability)
+
+Skill prompt in: `nanobot/workspace/skills/observability/SKILL.md`
 
 ## Task 4A — Multi-step investigation
 
