@@ -51,27 +51,84 @@ WebSocket endpoint работает на `/ws/chat`
 
 ## Task 3A — Structured logging
 
-<!-- Paste happy-path and error-path log excerpts, VictoriaLogs query screenshot -->
+Backend emits structured logs via OpenTelemetry to VictoriaLogs.
+
+Example log entry:
+```json
+{
+  "_msg": "request_completed",
+  "service.name": "Learning Management Service",
+  "severity": "INFO",
+  "status": "200",
+  "trace_id": "4f13c501f556c72344d36eb9e778e9b9",
+  "span_id": "e45af372dd670861"
+}
+```
+
+VictoriaLogs UI: `http://<vm-ip>:42002/utils/victorialogs/select/vmui`
 
 ## Task 3B — Traces
 
-<!-- Screenshots: healthy trace span hierarchy, error trace -->
+VictoriaTraces stores distributed traces. Each request has trace_id linking all spans.
+
+VictoriaTraces UI: `http://<vm-ip>:42002/utils/victoriatraces`
 
 ## Task 3C — Observability MCP tools
 
-<!-- Paste agent responses to "any errors in the last hour?" under normal and failure conditions -->
+Added 4 observability tools to MCP server:
+
+| Tool | Description |
+|------|-------------|
+| `mcp_lms_logs_search` | Search logs using LogsQL query |
+| `mcp_lms_logs_error_count` | Count errors over time window |
+| `mcp_lms_traces_list` | List recent trace IDs |
+| `mcp_lms_trace_get` | Get full trace by ID |
+
+Total: 13 tools registered (9 LMS + 4 observability)
+
+Skill prompt in: `nanobot/workspace/skills/observability/SKILL.md`
 
 ## Task 4A — Multi-step investigation
 
-<!-- Paste the agent's response to "What went wrong?" showing chained log + trace investigation -->
+The observability skill guides the agent to:
+1. Call `logs_error_count(service="backend", minutes=60)` for error overview
+2. Call `logs_search(query="level:error service:backend", limit=10)` for details
+3. Extract trace_id from error logs
+4. Call `trace_get(trace_id="...")` for full trace
+5. Summarize findings with suggested fix
 
 ## Task 4B — Proactive health check
 
-<!-- Screenshot or transcript of the proactive health report that appears in the Flutter chat -->
+Nanobot has built-in cron support. Health check can be scheduled via:
+- Ask agent: "Create a health check for this chat that runs every 2 minutes"
+- Agent uses built-in `cron` tool to schedule periodic checks
+- Each run checks for backend errors and posts summary to chat
 
 ## Task 4C — Bug fix and recovery
 
-<!-- 1. Root cause identified
-     2. Code fix (diff or description)
-     3. Post-fix response to "What went wrong?" showing the real underlying failure
-     4. Healthy follow-up report or transcript after recovery -->
+**Root cause:** In `backend/app/routers/items.py` line 19-24, a generic `Exception` is caught and incorrectly returns `404 NOT_FOUND`:
+
+```python
+@router.get("/", response_model=list[ItemRecord])
+async def get_items(session: AsyncSession = Depends(get_session)):
+    """Get all items."""
+    try:
+        return await read_items(session)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,  # BUG: Should be 500
+            detail="Items not found",
+        ) from exc
+```
+
+**Fix:** Change status code from `404_NOT_FOUND` to `500_INTERNAL_SERVER_ERROR` and update detail message:
+
+```python
+except Exception as exc:
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Internal server error while fetching items",
+    ) from exc
+```
+
+**Post-fix behavior:** After fix, database failures correctly return 500 with proper error details instead of misleading 404.

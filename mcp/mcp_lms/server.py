@@ -211,6 +211,115 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextCon
 
 
 # ---------------------------------------------------------------------------
+# Observability Tools (VictoriaLogs + VictoriaTraces)
+# ---------------------------------------------------------------------------
+
+import httpx
+
+_VICTORIALOGS_URL = os.environ.get("VICTORIALOGS_URL", "http://victorialogs:9428")
+_VICTORIATRACES_URL = os.environ.get(
+    "VICTORIATRACES_URL", "http://victoriatraces:10428"
+)
+
+
+class _LogsSearch(BaseModel):
+    query: str = Field(description="LogsQL query (e.g., 'error', 'service:backend')")
+    limit: int = Field(default=20, ge=1, le=100)
+
+
+class _LogsErrorCount(BaseModel):
+    service: str = Field(default="", description="Service name filter")
+    minutes: int = Field(default=60, ge=1, le=1440)
+
+
+class _TracesList(BaseModel):
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+class _TraceGet(BaseModel):
+    trace_id: str = Field(description="Trace ID")
+
+
+async def _logs_search(args: _LogsSearch) -> list[TextContent]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{_VICTORIALOGS_URL}/select/logsql/query",
+            params={"query": args.query, "limit": args.limit},
+        )
+        resp.raise_for_status()
+        results = [
+            json.loads(line) for line in resp.text.strip().split("\n") if line.strip()
+        ]
+    return _text({"logs": results, "count": len(results)})
+
+
+async def _logs_error_count(args: _LogsErrorCount) -> list[TextContent]:
+    query = "level:error"
+    if args.service:
+        query += f" AND service:{args.service}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{_VICTORIALOGS_URL}/select/logsql/query",
+            params={"query": query, "limit": 1000},
+        )
+        resp.raise_for_status()
+        errors = [
+            json.loads(line) for line in resp.text.strip().split("\n") if line.strip()
+        ]
+    by_service: dict[str, int] = {}
+    for e in errors:
+        svc = e.get("service.name", e.get("service", "unknown"))
+        by_service[svc] = by_service.get(svc, 0) + 1
+    return _text({"error_count": len(errors), "by_service": by_service})
+
+
+async def _traces_list(args: _TracesList) -> list[TextContent]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{_VICTORIALOGS_URL}/select/logsql/query",
+            params={"query": "trace_id", "limit": args.limit},
+        )
+        resp.raise_for_status()
+        trace_ids = list(
+            set(
+                json.loads(line).get("trace_id", "")
+                for line in resp.text.strip().split("\n")
+                if line.strip() and json.loads(line).get("trace_id")
+            )
+        )
+    return _text({"trace_ids": trace_ids, "count": len(trace_ids)})
+
+
+async def _trace_get(args: _TraceGet) -> list[TextContent]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{_VICTORIALOGS_URL}/select/logsql/query",
+            params={"query": f"trace_id:{args.trace_id}", "limit": 100},
+        )
+        resp.raise_for_status()
+        spans = [
+            json.loads(line) for line in resp.text.strip().split("\n") if line.strip()
+        ]
+    return _text({"trace_id": args.trace_id, "spans": spans, "span_count": len(spans)})
+
+
+_register(
+    "logs_search",
+    "Search logs in VictoriaLogs using LogsQL.",
+    _LogsSearch,
+    _logs_search,
+)
+_register(
+    "logs_error_count",
+    "Count errors in logs over time window.",
+    _LogsErrorCount,
+    _logs_error_count,
+)
+_register("traces_list", "List recent trace IDs.", _TracesList, _traces_list)
+_register("trace_get", "Get trace details by ID.", _TraceGet, _trace_get)
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
