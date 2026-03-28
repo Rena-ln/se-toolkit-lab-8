@@ -25,6 +25,12 @@ You have access to observability tools for debugging system issues:
 2. If errors found, call `logs_search` with query "level:error" to see details
 3. If a trace_id appears in logs, call `trace_get` to see the full trace
 
+### Proactive Health Checks (Cron)
+If the user wants ongoing monitoring:
+1. Use the cron tool to create a scheduled job
+2. Job should run `logs_error_count` at regular intervals (e.g., every 15 minutes)
+3. Post summary to the chat: "Health check: No errors" or "Health check: Found X errors"
+
 ### Query examples:
 - `logs_search(query="error", limit=20)` - search for errors
 - `logs_search(query="service:backend", limit=20)` - backend logs
