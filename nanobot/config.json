@@ -16,32 +16,44 @@
     "sendMaxRetries": 3,
     "webchat": {
       "enabled": true,
-      "allowFrom": ["*"]
+      "allowFrom": [
+        "*"
+      ]
     }
   },
   "providers": {
     "custom": {
-      "apiKey": "HA9la5kCgaQrTav1yKoWnzzYrUhJpwPFTP3bSHS7-6Tfjet4DCpiCp6F0RPSqeuKlbj0U2RRLtlh_uzRG6MEkA",
-      "apiBase": "http://localhost:42005/v1"
+      "apiKey": "${LLM_API_KEY}",
+      "apiBase": "${LLM_API_BASE_URL}"
     }
   },
   "gateway": {
-    "host": "0.0.0.0",
-    "port": 18790
+    "host": "${NANOBOT_GATEWAY_CONTAINER_ADDRESS}",
+    "port": "${NANOBOT_GATEWAY_CONTAINER_PORT}"
   },
   "tools": {
-    "web": {"search": {"provider": "brave"}},
-    "exec": {"enable": true, "timeout": 60},
+    "web": {
+      "search": {
+        "provider": "brave"
+      }
+    },
+    "exec": {
+      "enable": true,
+      "timeout": 60
+    },
     "restrictToWorkspace": false,
     "mcpServers": {
       "lms": {
         "command": "python",
-        "args": ["-m", "mcp_lms"],
+        "args": [
+          "-m",
+          "mcp_lms"
+        ],
         "env": {
-          "NANOBOT_LMS_BACKEND_URL": "http://localhost:42002",
-          "NANOBOT_LMS_API_KEY": "lab8-secret-key-2026",
-          "VICTORIALOGS_URL": "http://localhost:42010",
-          "VICTORIATRACES_URL": "http://localhost:42011"
+          "NANOBOT_LMS_BACKEND_URL": "${NANOBOT_LMS_BACKEND_URL}",
+          "NANOBOT_LMS_API_KEY": "${NANOBOT_LMS_API_KEY}",
+          "VICTORIALOGS_URL": "${VICTORIALOGS_URL}",
+          "VICTORIATRACES_URL": "${VICTORIATRACES_URL}"
         }
       }
     }
